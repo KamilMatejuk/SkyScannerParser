@@ -7,7 +7,7 @@ from utils import get_airport_city
 
 AIRPORT = {
     "Kraków": "krak",
-    "Valetta": "mlaa",
+    "Valletta": "mlaa",
 }
 
 PL_MONTHS = {
