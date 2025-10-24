@@ -61,7 +61,10 @@ def parse_page(html: str) -> pd.DataFrame:
         departure_time = ticket_container.select_one('[class*="RoutePartial_routePartialDepart__"] > span').text.strip()
         departure = datetime.datetime.combine(date, datetime.datetime.strptime(departure_time, "%H:%M").time())
         arrival_time = ticket_container.select_one('[class*="RoutePartial_routePartialArrive__"] > span').text.strip()
-        arrival = datetime.datetime.combine(date, datetime.datetime.strptime(arrival_time, "%H:%M").time())
+        if "+1" in arrival_time:
+            arrival_time = arrival_time.replace("+1", "").strip()
+            arrival = datetime.datetime.combine(date + datetime.timedelta(days=1), datetime.datetime.strptime(arrival_time, "%H:%M").time())
+        else: arrival = datetime.datetime.combine(date, datetime.datetime.strptime(arrival_time, "%H:%M").time())
         stops = ticket_container.select_one('[class*="Stops_stopsLabelContainer__"]').text.strip()
         if "Bezpośredni" in stops: stops = None
         else: stops = get_airport_city(stops.replace(u'\xa0', u' ').split(" ")[-1].strip())
