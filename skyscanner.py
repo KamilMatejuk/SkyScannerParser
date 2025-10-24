@@ -6,7 +6,14 @@ from utils import get_airport_city
 
 
 AIRPORT = {
+    # poland
+    "Gdańsk": "gada",
+    "Katowice": "kato",
     "Kraków": "krak",
+    "Poznań": "pozn",
+    "Warszawa": "wars",
+    "Wrocław": "wroc",
+    # malta
     "Valletta": "mlaa",
 }
 
