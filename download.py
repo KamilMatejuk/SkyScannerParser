@@ -7,6 +7,9 @@ import webbrowser
 import pandas as pd
 
 from skyscanner import build_url, parse_page
+from logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def main(args):
@@ -27,9 +30,9 @@ def main(args):
         data['departure'] = pd.to_datetime(data['departure'])
         data['arrival'] = pd.to_datetime(data['arrival'])
     else: data = pd.DataFrame()
-    
-    for start, end, date, link in links:
-        print(f"Downloading {start} -> {end} on {date}")
+
+    for i, (start, end, date, link) in enumerate(links):
+        logger.warning(f"[{i+1}/{len(links)}] Downloading {start} -> {end} on {date}")
         # check if already downloaded in df
         exists = not data.empty and data[
             (data['start'] == start) &
@@ -37,7 +40,7 @@ def main(args):
             (data['departure'].dt.strftime("%d.%m.%Y") == date)
         ].shape[0] > 0
         if exists:
-            print(f"Skipping, already in {args.output}")
+            logger.debug(f"Skipping, already in {args.output}")
             continue
         # open in chrome
         webbrowser.open(link)
@@ -46,24 +49,24 @@ def main(args):
         while True:
             files = [f for f in os.listdir(args.folder) if f.endswith(".html")]
             if not files:
-                print("Waiting for download...")
+                logger.debug("Waiting for download...")
                 time.sleep(3)
                 continue
             filename = files[0]
-            print(f"Detected downloaded file: {filename}")
+            logger.debug(f"Detected downloaded file: {filename}")
             break
         # load saved html and parse
         with open(os.path.join(args.folder, filename), "r", encoding="utf-8") as f:
             html = f.read()
         df = parse_page(html)
-        print(f"Parsed {len(df)} flights")
+        logger.debug(f"Parsed {len(df)} flights")
         # save to db
         data = pd.concat([data, df], ignore_index=True) if not data.empty else df
         data.to_csv(args.output, index=False)
-        print(f"Saved to {args.output}")
+        logger.debug(f"Saved to {args.output}")
         os.remove(os.path.join(args.folder, filename))
         shutil.rmtree(os.path.join(args.folder, filename.replace(".html", "_files")))
-        print(f"Removed downloaded files.")
+        logger.debug(f"Removed downloaded files.")
 
 
 if __name__ == "__main__":
