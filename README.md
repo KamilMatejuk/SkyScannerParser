@@ -5,3 +5,4 @@ python download.py -s Kraków -s Wrocław -e Valetta -d 01.11.2025 -d 02.11.2025
 ```
 
 ### Filter results
+open `filter.ipynb`, set variables in first cell and run all
