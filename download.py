@@ -9,6 +9,7 @@ import pandas as pd
 
 
 from skyscanner import build_url, parse_page
+from utils import MOUSE_POSITION
 from logger import get_logger
 
 logger = get_logger(__name__)
@@ -46,17 +47,28 @@ def main(args):
             continue
         # open in chrome
         webbrowser.open(link)
+        # wait for load
+        logger.debug("Waiting for page to load...")
+        time.sleep(15)
+        # save page using hotkeys
+        logger.debug("Saving page...")
+        pyautogui.hotkey("ctrl", "s")
+        time.sleep(1)
+        pyautogui.moveTo(*MOUSE_POSITION)
+        pyautogui.click()
         # watch changes in downloads
         filename = None
         while True:
             files = [f for f in os.listdir(args.folder) if f.endswith(".html")]
             if not files:
                 logger.debug("Waiting for download...")
-                time.sleep(3)
+                time.sleep(1)
                 continue
             filename = files[0]
             logger.debug(f"Detected downloaded file: {filename}")
             break
+        # close tab
+        pyautogui.hotkey("ctrl", "w")
         # load saved html and parse
         with open(os.path.join(args.folder, filename), "r", encoding="utf-8") as f:
             html = f.read()
