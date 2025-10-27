@@ -2,9 +2,11 @@ import os
 import time
 import shutil
 import argparse
+import pyautogui
 import itertools
 import webbrowser
 import pandas as pd
+
 
 from skyscanner import build_url, parse_page
 from logger import get_logger

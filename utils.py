@@ -1,5 +1,7 @@
 import pandas as pd
 
+MOUSE_POSITION = (1448, 387)
+
 
 def get_airport_city(code: str) -> str:
     df = pd.read_csv("airport-codes.csv")
