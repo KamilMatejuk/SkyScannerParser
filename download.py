@@ -89,7 +89,6 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--start", action="append", required=True, help="Start city names")
     parser.add_argument("-e", "--end", action="append", required=True, help="End city names")
     parser.add_argument("-d", "--date", action="append", required=True, help="Departure dates in DD.MM.YYYY format")
-    parser.add_argument("--open", type=int, default=5, help="How many links to open at one time in the browser (default: 5)")
     parser.add_argument("--max_duration", type=int, default=600, help="Maximum flight duration in minutes")
     parser.add_argument("--stop", action="store_true", help="Allow stops in the flight")
     # download
