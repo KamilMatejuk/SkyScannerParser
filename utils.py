@@ -1,6 +1,7 @@
 import pandas as pd
 
-MOUSE_POSITION = (1448, 387)
+# MOUSE_POSITION = (1448, 387) # TV
+MOUSE_POSITION = (1376, 395) # Laptop
 
 
 def get_airport_city(code: str) -> str:
