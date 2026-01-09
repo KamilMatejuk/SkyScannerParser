@@ -51,6 +51,7 @@ def generate_pairs(flights_df: pd.DataFrame,
     # join
     for _, outbound in outbound_flights.iterrows():
         for _, inbound in inbound_flights.iterrows():
+            if inbound['departure'] <= outbound['arrival']: continue
             nights = (inbound['departure'].date() - outbound['departure'].date()).days
             free_days = sum(outbound['arrival'].date() < d < inbound['departure'].date() for d in holidays)
             if outbound['arrival'].date() in holidays and outbound['arrival'].hour < 15: free_days += 1
