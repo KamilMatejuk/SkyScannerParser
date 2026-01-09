@@ -4,6 +4,7 @@ import shutil
 import argparse
 import pyautogui
 import itertools
+import traceback
 import webbrowser
 import pandas as pd
 
@@ -35,52 +36,59 @@ def main(args):
     else: data = pd.DataFrame()
 
     for i, (start, end, date, link) in enumerate(links):
-        logger.warning(f"[{i+1}/{len(links)}] Downloading {start} -> {end} on {date}")
-        # check if already downloaded in df
-        exists = not data.empty and data[
-            (data['start'] == start) &
-            (data['end'] == end) &
-            (data['departure'].dt.strftime("%d.%m.%Y") == date)
-        ].shape[0] > 0
-        if exists:
-            logger.debug(f"Skipping, already in {args.output}")
-            continue
-        # open in chrome
-        webbrowser.open(link)
-        # wait for load
-        logger.debug("Waiting for page to load...")
-        time.sleep(15)
-        # save page using hotkeys
-        logger.debug("Saving page...")
-        pyautogui.hotkey("ctrl", "s")
-        time.sleep(1)
-        pyautogui.moveTo(*MOUSE_POSITION)
-        pyautogui.click()
-        # watch changes in downloads
-        filename = None
-        while True:
-            files = [f for f in os.listdir(args.folder) if f.endswith(".html")]
-            if not files:
-                logger.debug("Waiting for download...")
-                time.sleep(1)
+        try:
+            logger.warning(f"[{i+1}/{len(links)}] Downloading {start} -> {end} on {date}")
+            # check if already downloaded in df
+            exists = not data.empty and data[
+                (data['start'] == start) &
+                (data['end'] == end) &
+                (data['departure'].dt.strftime("%d.%m.%Y") == date)
+            ].shape[0] > 0
+            if exists:
+                logger.debug(f"Skipping, already in {args.output}")
                 continue
-            filename = files[0]
-            logger.debug(f"Detected downloaded file: {filename}")
+            # open in chrome
+            webbrowser.open(link)
+            # wait for load
+            logger.debug("Waiting for page to load...")
+            time.sleep(15)
+            # save page using hotkeys
+            logger.debug("Saving page...")
+            pyautogui.hotkey("ctrl", "s")
+            time.sleep(1)
+            pyautogui.moveTo(*MOUSE_POSITION)
+            pyautogui.click()
+            # watch changes in downloads
+            filename = None
+            while True:
+                files = [f for f in os.listdir(args.folder) if f.endswith(".html")]
+                if not files:
+                    logger.debug("Waiting for download...")
+                    time.sleep(1)
+                    continue
+                filename = files[0]
+                logger.debug(f"Detected downloaded file: {filename}")
+                break
+            # close tab
+            pyautogui.hotkey("ctrl", "w")
+            # load saved html and parse
+            with open(os.path.join(args.folder, filename), "r", encoding="utf-8") as f:
+                html = f.read()
+            df = parse_page(html)
+            logger.debug(f"Parsed {len(df)} flights")
+            # save to db
+            data = pd.concat([data, df], ignore_index=True) if not data.empty else df
+            data.to_csv(args.output, index=False)
+            logger.debug(f"Saved to {args.output}")
+            os.remove(os.path.join(args.folder, filename))
+            shutil.rmtree(os.path.join(args.folder, filename.replace(".html", "_files")))
+            logger.debug(f"Removed downloaded files.")
+        except Exception as e:
+            logger.error(f"Error processing {start} -> {end} on {date}")
+            logger.error(f"Link: {link}")
+            for line in traceback.format_exc().splitlines():
+                logger.error(line)
             break
-        # close tab
-        pyautogui.hotkey("ctrl", "w")
-        # load saved html and parse
-        with open(os.path.join(args.folder, filename), "r", encoding="utf-8") as f:
-            html = f.read()
-        df = parse_page(html)
-        logger.debug(f"Parsed {len(df)} flights")
-        # save to db
-        data = pd.concat([data, df], ignore_index=True) if not data.empty else df
-        data.to_csv(args.output, index=False)
-        logger.debug(f"Saved to {args.output}")
-        os.remove(os.path.join(args.folder, filename))
-        shutil.rmtree(os.path.join(args.folder, filename.replace(".html", "_files")))
-        logger.debug(f"Removed downloaded files.")
 
 
 if __name__ == "__main__":
