@@ -10,6 +10,7 @@ def set_session(key, default):
     if key not in st.session_state:
         st.session_state[key] = default
 set_session('uploaded', False)
+set_session('filename', '')
 set_session('flights_df', None)
 set_session('pairs_df', None)
 set_session('selection_shown', False)
@@ -106,6 +107,7 @@ def main_file_upload():
         try:
             flights_df = read_csv(uploaded)
             st.session_state['flights_df'] = flights_df
+            st.session_state['filename'] = uploaded.name.replace('.csv', '')
             st.session_state['uploaded'] = True
             st.rerun()
         except Exception as e:
@@ -147,10 +149,14 @@ def main_results():
             filtered = filtered[
                 (filtered['out_airport'].str.count('->') == 1) &
                 (filtered['in_airport'].str.count('->') == 1)]
-        if st.checkbox('Only same start/end cities', value=False):
+        if st.checkbox('Only same origin city', value=False):
             filtered = filtered[
                 filtered['out_airport'].str.split(' -> ').str[0] ==
                 filtered['in_airport'].str.split(' -> ').str[-1]]
+        if st.checkbox('Only same target city', value=False):
+            filtered = filtered[
+                filtered['out_airport'].str.split(' -> ').str[-1] ==
+                filtered['in_airport'].str.split(' -> ').str[0]]
     with main:
         if filtered is None or len(filtered) == 0:
             st.warning('No rows matched the selection — click Reset to try again.')
@@ -158,11 +164,26 @@ def main_results():
             st.write(f'### Generated roundtrip flights: {len(filtered)}')
             show = filtered.drop(columns=['out_price', 'in_price'], axis=1)
             show = show.sort_values(by=['total_price', 'free_days', 'nights'], ascending=[True, False, True])
+            # apply favourites
+            show = show.assign(favourite=False)
+            show = show[['favourite'] + [c for c in show.columns if c != 'favourite']]
+            try:
+                favourite = pd.read_csv(st.session_state['filename'] + '_fav.csv')
+                keys = ['out_link', 'in_link']
+                show['favourite'] = show[keys].apply(tuple, axis=1).isin(favourite[keys].apply(tuple, axis=1))
+            except FileNotFoundError: pass
+            # show df
             columns = {
                 "out_link": st.column_config.LinkColumn("out_link"),
                 "in_link": st.column_config.LinkColumn("in_link"),
+                "favourite": st.column_config.CheckboxColumn("⭐"),
             }
-            st.dataframe(show, column_config=columns, hide_index=True, height=700)
+            edited = st.data_editor(show, hide_index=True, height=700, column_config=columns,
+                key="editor", disabled=[c for c in show.columns if c != "favourite"])
+            # handle favourites change
+            favourite = edited[edited["favourite"]]
+            favourite.to_csv(st.session_state['filename'] + '_fav.csv', index=False)
+
 
 def main():
     st.set_page_config(page_title="DataFrame Explorer", layout="wide")
