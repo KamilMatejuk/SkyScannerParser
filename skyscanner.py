@@ -15,6 +15,18 @@ AIRPORT = {
     "Wrocław": "wroc",
     # malta
     "Valletta": "mlaa",
+    # spain
+    "Valencia": "vlc",
+    # spain - canary islands
+    "Lanzarote": "acea",
+    "Fuerteventura": "fuer",
+    "GranCanaria": "lpaa",
+    "Tenerife": "tene",
+    "SantaCruzDeLaPalma": "lapa",
+    # spain - balearic islands
+    "Ibiza": "ibiz",
+    "Mallorca": "palm",
+    "Menorca": "meno",
 }
 
 PL_MONTHS = {
@@ -36,23 +48,30 @@ PL_MONTHS = {
 def build_url(start: str, end: str, departure_date: str, max_duration: int, stop: bool) -> str:
     date_slug = datetime.datetime.strptime(departure_date, "%d.%m.%Y").strftime("%y%m%d")
     base = "https://www.skyscanner.pl/transport/loty"
-    query = (
-        "?adultsv2=1&cabinclass=economy&childrenv2=&ref=home&rtn=0"
-        "&outboundaltsenabled=false&inboundaltsenabled=false"
-    )
-    query += f"&duration={max_duration}" # in minutes
-    query += f"&stops={'!twoPlusStops' if stop else '!oneStop,!twoPlusStops'}"
-    return f"{base}/{AIRPORT[start]}/{AIRPORT[end]}/{date_slug}/{query}"
+    query = "&".join((
+        "adultsv2=1",
+        "cabinclass=economy",
+        "childrenv2=",
+        "ref=home",
+        "rtn=0"
+        "outboundaltsenabled=false",
+        "inboundaltsenabled=false",
+        f"duration={max_duration}", # in minutes
+        f"stops={'!twoPlusStops' if stop else '!oneStop,!twoPlusStops'}"
+    ))
+    return f"{base}/{AIRPORT[start]}/{AIRPORT[end]}/{date_slug}?{query}"
 
 
 def parse_page(html: str) -> pd.DataFrame:
     soup = BeautifulSoup(html, "html.parser")
     start = soup.select_one('[class*="SearchDetails_search__origin__"]').text.split("(")[0].strip()
     end = soup.select_one('[class*="SearchDetails_search__destination__"]').text.split("(")[0].strip()
-    day = soup.select_one('[class*="MiniGrid_cellSelected__"] > span').text.strip()
+    day = soup.select_one('[class*="DatePicker_date-picker__container__"] input').get("value").split(",")[-1].strip()
     day_part, month_abbr = day.strip().split()
     date = datetime.datetime(datetime.datetime.now().year, PL_MONTHS[month_abbr.lower()], int(day_part)).date()
     results = soup.select_one('[class*="FlightsResults_dayViewItems__"]')
+    if results is None: # no results with those filters
+        return pd.DataFrame()
     ticket_containers = results.select('[class*="FlightsTicket_container__"]')
     results = []
     for ticket_container in ticket_containers:
