@@ -55,7 +55,7 @@ def build_url(start: str, end: str, departure_date: str, max_duration: int, stop
         "cabinclass=economy",
         "childrenv2=",
         "ref=home",
-        "rtn=0"
+        "rtn=0",
         "outboundaltsenabled=false",
         "inboundaltsenabled=false",
         f"duration={max_duration}", # in minutes
@@ -64,13 +64,8 @@ def build_url(start: str, end: str, departure_date: str, max_duration: int, stop
     return f"{base}/{AIRPORT[start]}/{AIRPORT[end]}/{date_slug}?{query}"
 
 
-def parse_page(html: str) -> pd.DataFrame:
+def parse_page(html: str, start: str, end: str, date: datetime.date) -> pd.DataFrame:
     soup = BeautifulSoup(html, "html.parser")
-    start = soup.select_one('[class*="SearchDetails_search__origin__"]').text.split("(")[0].strip()
-    end = soup.select_one('[class*="SearchDetails_search__destination__"]').text.split("(")[0].strip()
-    day = soup.select_one('[class*="DatePicker_date-picker__container__"] input').get("value").split(",")[-1].strip()
-    day_part, month_abbr = day.strip().split()
-    date = datetime.datetime(datetime.datetime.now().year, PL_MONTHS[month_abbr.lower()], int(day_part)).date()
     results = soup.select_one('[class*="FlightsResults_dayViewItems__"]')
     if results is None: # no results with those filters
         return pd.DataFrame()

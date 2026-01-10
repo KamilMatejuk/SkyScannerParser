@@ -6,6 +6,7 @@ import pyautogui
 import itertools
 import traceback
 import webbrowser
+import datetime
 import pandas as pd
 
 
@@ -27,7 +28,7 @@ def main(args):
             max_duration=args.max_duration,
             stop=args.stop
         )
-        links.append((start, end, date, link))
+        links.append((start, end, datetime.datetime.strptime(date, "%d.%m.%Y").date(), link))
     
     if os.path.exists(args.output):
         data = pd.read_csv(args.output)
@@ -42,7 +43,7 @@ def main(args):
             exists = not data.empty and data[
                 (data['start'] == start) &
                 (data['end'] == end) &
-                (data['departure'].dt.strftime("%d.%m.%Y") == date)
+                (data['departure'].dt.date == date)
             ].shape[0] > 0
             if exists:
                 logger.debug(f"Skipping, already in {args.output}")
@@ -74,7 +75,7 @@ def main(args):
             # load saved html and parse
             with open(os.path.join(args.folder, filename), "r", encoding="utf-8") as f:
                 html = f.read()
-            df = parse_page(html)
+            df = parse_page(html, start, end, date)
             logger.debug(f"Parsed {len(df)} flights")
             # save to db
             data = pd.concat([data, df], ignore_index=True) if not data.empty else df
