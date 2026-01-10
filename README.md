@@ -11,16 +11,11 @@ MOUSE_POSITION = (0, 0)
 
 Run download script. This will open windows one by one, move mouse to save them, watch for changes in download folder and parse files as they come.
 ```bash
-python download.py \
-    --stop \
-    -o data.csv \
-    -s Kraków \
-    -s Wrocław \
-    -e Valetta \
-    -d 01.11.2025 \
-    -d 02.11.2025 \
-    -d 03.11.2025 \
-    -d 04.11.2025
+python download.py --stop -o data.csv -s Kraków -s Wrocław -e Valetta -d 01.11.2025 -d 02.11.2025
+```
+Or if you know you want to spend specific weekend and number of days:
+```bash
+python3 download.py --stop -o madeira.csv -s $start -e $end --range-dates 5-10 --must-have-dates 01.05.2026-03.05.2026
 ```
 
 ### Filter results

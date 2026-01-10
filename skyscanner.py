@@ -47,8 +47,8 @@ PL_MONTHS = {
 }
 
 
-def build_url(start: str, end: str, departure_date: str, max_duration: int, stop: bool) -> str:
-    date_slug = datetime.datetime.strptime(departure_date, "%d.%m.%Y").strftime("%y%m%d")
+def build_url(start: str, end: str, departure_date: datetime.date, max_duration: int, stop: bool) -> str:
+    date_slug = departure_date.strftime("%y%m%d")
     base = "https://www.skyscanner.pl/transport/loty"
     query = "&".join((
         "adultsv2=1",
