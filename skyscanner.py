@@ -15,6 +15,8 @@ AIRPORT = {
     "Wrocław": "wroc",
     # malta
     "Valletta": "mlaa",
+    # portugal
+    "Madeira": "fnc",
     # spain
     "Valencia": "vlc",
     # spain - canary islands
