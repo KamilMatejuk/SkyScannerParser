@@ -1,3 +1,4 @@
+import calendar
 import datetime
 import pandas as pd
 import streamlit as st
@@ -145,10 +146,14 @@ def main_start_end_selection():
     # holidays
     days = sorted(set(flights_df['departure'].dt.date.unique().tolist() + flights_df['arrival'].dt.date.unique().tolist()))
     with c2:
-        holidays = st.multiselect('Holidays', options=days, default=[d for d in days if d.weekday() in (5, 6)])
-        workday_hours = st.slider(f'Workday hours', min_value=0, max_value=24, value=(14, 24))
+        holidays = st.multiselect(
+            'Holidays',
+            options=days,
+            default=[d for d in days if d.weekday() in (5, 6)],
+            format_func=lambda d: f"{d} ({calendar.day_abbr[d.weekday()]})")
+        workday_hours = st.slider('Workday hours', min_value=0, max_value=24, value=(14, 24))
         max_days = (flights_df['arrival'].max().date() - flights_df['departure'].min().date()).days
-        max_nights = st.slider(f'Max nights', min_value=0, max_value=max_days, value=max_days)
+        max_nights = st.slider('Max nights', min_value=0, max_value=max_days, value=max_days)
     # run
     show_btn = len(start_selection) > 0 and len(end_selection) > 0
     if st.button('Generate round trips', disabled=not show_btn, width='stretch'):
