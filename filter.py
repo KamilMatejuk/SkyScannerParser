@@ -38,7 +38,6 @@ def generate_pairs(flights_df: pd.DataFrame,
     pairs = []
     # add weekends to holidays
     dates = pd.date_range(start=flights_df['departure'].min().date(), end=flights_df['departure'].max().date())
-    holidays = set(holidays + [d.date() for d in dates if d.weekday() in (5, 6)])
     # remove outside workday hours
     flights_df = flights_df[
         (flights_df['departure'].dt.date.isin(holidays)) | 
@@ -129,7 +128,7 @@ def main_start_end_selection():
     # holidays
     days = sorted(set(flights_df['departure'].dt.date.unique().tolist() + flights_df['arrival'].dt.date.unique().tolist()))
     with c2:
-        holidays = st.multiselect('Holidays (optional, not including weekends)', options=days)
+        holidays = st.multiselect('Holidays', options=days, default=[d for d in days if d.weekday() in (5, 6)])
         workday_hours = st.slider(f'Workday hours', min_value=0, max_value=24, value=(14, 24))
     
     max_days = (flights_df['arrival'].max().date() - flights_df['departure'].min().date()).days
