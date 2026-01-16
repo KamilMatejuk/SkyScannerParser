@@ -127,7 +127,7 @@ def main_start_end_selection():
     # holidays
     days = sorted(set(flights_df['departure'].dt.date.unique().tolist() + flights_df['arrival'].dt.date.unique().tolist()))
     with c2:
-        holidays = st.multiselect('Holidays (optional)', options=days)
+        holidays = st.multiselect('Holidays (optional, not including weekends)', options=days)
         workday_hours = st.slider(f'Workday hours', min_value=0, max_value=24, value=(14, 24))
     # run
     show_btn = len(start_selection) > 0 and len(end_selection) > 0
