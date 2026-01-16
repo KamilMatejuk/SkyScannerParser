@@ -33,7 +33,8 @@ def generate_pairs(flights_df: pd.DataFrame,
                    start_cities: list[str],
                    end_cities: list[str],
                    holidays: list[datetime.date],
-                   workday_hours: tuple[int, int]) -> pd.DataFrame:
+                   workday_hours: tuple[int, int],
+                   max_nights: int) -> pd.DataFrame:
     pairs = []
     # add weekends to holidays
     dates = pd.date_range(start=flights_df['departure'].min().date(), end=flights_df['departure'].max().date())
@@ -53,6 +54,7 @@ def generate_pairs(flights_df: pd.DataFrame,
         for _, inbound in inbound_flights.iterrows():
             if inbound['departure'] <= outbound['arrival']: continue
             nights = (inbound['departure'].date() - outbound['departure'].date()).days
+            if nights > max_nights: continue
             free_days = sum(outbound['arrival'].date() < d < inbound['departure'].date() for d in holidays)
             if outbound['arrival'].date() in holidays and outbound['arrival'].hour < 15: free_days += 1
             if inbound['departure'].date() in holidays and inbound['departure'].hour >= 15: free_days += 1
@@ -129,10 +131,13 @@ def main_start_end_selection():
     with c2:
         holidays = st.multiselect('Holidays (optional, not including weekends)', options=days)
         workday_hours = st.slider(f'Workday hours', min_value=0, max_value=24, value=(14, 24))
+    
+    max_days = (flights_df['arrival'].max().date() - flights_df['departure'].min().date()).days
+    max_nights = st.slider(f'Max nights', min_value=0, max_value=max_days, value=max_days)
     # run
     show_btn = len(start_selection) > 0 and len(end_selection) > 0
     if st.button('Generate round trips', disabled=not show_btn, width='stretch'):
-        pairs = generate_pairs(flights_df, start_selection, end_selection, holidays, workday_hours)
+        pairs = generate_pairs(flights_df, start_selection, end_selection, holidays, workday_hours, max_nights)
         st.session_state['pairs_df'] = pairs
         st.session_state['selection_shown'] = True
         st.rerun()
