@@ -34,6 +34,9 @@ def generate_pairs(flights_df: pd.DataFrame,
                    end_cities: list[str],
                    holidays: list[datetime.date],
                    workday_hours: tuple[int, int],
+                   baggage_price: int,
+                   night_price: int,
+                   eat_price: int,
                    max_nights: int) -> pd.DataFrame:
     pairs = []
     # add weekends to holidays
@@ -68,7 +71,13 @@ def generate_pairs(flights_df: pd.DataFrame,
                 'in_airport': format_airport(inbound),
                 'in_date': format_date(inbound),
                 'in_time': format_time(inbound),
-                'total_price': outbound['price'] + inbound['price'],
+                'flight_price': outbound['price'] + inbound['price'],
+                'baggage_price': baggage_price * (2 + (1 if inbound['stops'] else 0) + (1 if outbound['stops'] else 0)),
+                'live_price': night_price * nights + eat_price * (nights + 1),
+                'total_price': outbound['price'] + inbound['price'] + 
+                               night_price * nights + 
+                               eat_price * (nights + 1) + 
+                               baggage_price * (2 + (1 if inbound['stops'] else 0) + (1 if outbound['stops'] else 0)),
                 'out_link': outbound['link'],
                 'in_link': inbound['link'],
             })
@@ -125,18 +134,29 @@ def main_start_end_selection():
     with c1:
         start_selection = st.multiselect('Start cities', options=cities)
         end_selection = st.multiselect('End cities', options=cities)
+        st.write('Additional price estimation')
+        c11, c12, c13 = st.columns([1, 1, 1])
+        with c11:
+            baggage_price = st.number_input('Luggage (per flight, PLN)', min_value=0, step=10, value=0)
+        with c12:
+            night_price = st.number_input('Sleep (per night, PLN)', min_value=0, step=10, value=0)
+        with c13:
+            eat_price = st.number_input('Eat (per day, PLN)', min_value=0, step=10, value=0)
     # holidays
     days = sorted(set(flights_df['departure'].dt.date.unique().tolist() + flights_df['arrival'].dt.date.unique().tolist()))
     with c2:
         holidays = st.multiselect('Holidays', options=days, default=[d for d in days if d.weekday() in (5, 6)])
         workday_hours = st.slider(f'Workday hours', min_value=0, max_value=24, value=(14, 24))
-    
-    max_days = (flights_df['arrival'].max().date() - flights_df['departure'].min().date()).days
-    max_nights = st.slider(f'Max nights', min_value=0, max_value=max_days, value=max_days)
+        max_days = (flights_df['arrival'].max().date() - flights_df['departure'].min().date()).days
+        max_nights = st.slider(f'Max nights', min_value=0, max_value=max_days, value=max_days)
     # run
     show_btn = len(start_selection) > 0 and len(end_selection) > 0
     if st.button('Generate round trips', disabled=not show_btn, width='stretch'):
-        pairs = generate_pairs(flights_df, start_selection, end_selection, holidays, workday_hours, max_nights)
+        pairs = generate_pairs(flights_df,
+                               start_selection, end_selection,
+                               holidays, workday_hours,
+                               baggage_price, night_price, eat_price,
+                               max_nights)
         st.session_state['pairs_df'] = pairs
         st.session_state['selection_shown'] = True
         st.rerun()
