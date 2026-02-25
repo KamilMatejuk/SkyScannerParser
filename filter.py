@@ -1,4 +1,5 @@
 import os
+import json
 import calendar
 import datetime
 import pandas as pd
@@ -128,31 +129,59 @@ def main_file_upload():
 def main_start_end_selection():
     flights_df: pd.DataFrame = st.session_state['flights_df']
     st.success(f'Flights loaded — rows: {len(flights_df)} columns: {len(flights_df.columns)}')
+    # load configuration
+    config = {}
+    uploaded = st.file_uploader('Load configuration', type=['json'], accept_multiple_files=False)
+    print(uploaded)
+    if uploaded is not None and len(config) == 0:
+        try: 
+            with open(uploaded.name, 'r') as f:
+                config = json.load(f)
+            print(config)
+            st.rerun()
+        except: pass
+            
     c1, c2 = st.columns([1, 1])
     # start and end cities
     cities = set(flights_df['start'].dropna().unique().tolist() + flights_df['end'].dropna().unique().tolist())
     with c1:
-        start_selection = st.multiselect('Start cities', options=cities)
-        end_selection = st.multiselect('End cities', options=cities)
+        start_selection = st.multiselect('Start cities', options=cities, default=config['start_cities'] if 'start_cities' in config else None)
+        end_selection = st.multiselect('End cities', options=cities, default=config['end_cities'] if 'end_cities' in config else None)
         st.write('Additional price estimation')
         c11, c12, c13 = st.columns([1, 1, 1])
         with c11:
-            baggage_price = st.number_input('Luggage (per flight, PLN)', min_value=0, step=10, value=0)
+            baggage_price = st.number_input('Luggage (per flight, PLN)', min_value=0, step=10, value=config['baggage_price'] if 'baggage_price' in config else 0)
         with c12:
-            night_price = st.number_input('Sleep (per night, PLN)', min_value=0, step=10, value=0)
+            night_price = st.number_input('Sleep (per night, PLN)', min_value=0, step=10, value=config['night_price'] if 'night_price' in config else 0)
         with c13:
-            eat_price = st.number_input('Eat (per day, PLN)', min_value=0, step=10, value=0)
+            eat_price = st.number_input('Eat (per day, PLN)', min_value=0, step=10, value=config['eat_price'] if 'eat_price' in config else 0)
     # holidays
     days = sorted(set(flights_df['departure'].dt.date.unique().tolist() + flights_df['arrival'].dt.date.unique().tolist()))
     with c2:
+        format_day = lambda d: f"{d} ({calendar.day_abbr[d.weekday()]})"
         holidays = st.multiselect(
             'Holidays',
             options=days,
-            default=[d for d in days if d.weekday() in (5, 6)],
-            format_func=lambda d: f"{d} ({calendar.day_abbr[d.weekday()]})")
-        workday_hours = st.slider('Workday hours', min_value=0, max_value=24, value=(0, 24))
+            default=[datetime.datetime.strptime(d, '%Y-%m-%d').date() for d in config['holidays']]
+                if 'holidays' in config
+                else [d for d in days if d.weekday() in (5, 6)],
+            format_func=format_day)
+        workday_hours = st.slider('Workday hours', min_value=0, max_value=24, value=config['workday_hours'] if 'workday_hours' in config else (0, 24))
         max_days = (flights_df['arrival'].max().date() - flights_df['departure'].min().date()).days
-        max_nights = st.slider('Max nights', min_value=0, max_value=max_days, value=min(max_days, 10))
+        max_nights = st.slider('Max nights', min_value=0, max_value=max_days, value=config['max_nights'] if 'max_nights' in config else min(max_days, 10))
+    # save configuration
+    if st.button('Save configuration', width='stretch'):
+        with open(st.session_state['filename'] + '_config.json', 'w') as f:
+            json.dump({
+                'start_cities': start_selection,
+                'end_cities': end_selection,
+                'holidays': holidays,
+                'workday_hours': workday_hours,
+                'baggage_price': baggage_price,
+                'night_price': night_price,
+                'eat_price': eat_price,
+                'max_nights': max_nights,
+            }, f, default=str)
     # run
     show_btn = len(start_selection) > 0 and len(end_selection) > 0
     if st.button('Generate round trips', disabled=not show_btn, width='stretch'):
