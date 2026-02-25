@@ -1,3 +1,4 @@
+import os
 import calendar
 import datetime
 import pandas as pd
@@ -40,8 +41,6 @@ def generate_pairs(flights_df: pd.DataFrame,
                    eat_price: int,
                    max_nights: int) -> pd.DataFrame:
     pairs = []
-    # add weekends to holidays
-    dates = pd.date_range(start=flights_df['departure'].min().date(), end=flights_df['departure'].max().date())
     # remove outside workday hours
     flights_df = flights_df[
         (flights_df['departure'].dt.date.isin(holidays)) | 
@@ -73,12 +72,12 @@ def generate_pairs(flights_df: pd.DataFrame,
                 'in_date': format_date(inbound),
                 'in_time': format_time(inbound),
                 'flight_price': outbound['price'] + inbound['price'],
-                'baggage_price': baggage_price * (2 + (1 if inbound['stops'] else 0) + (1 if outbound['stops'] else 0)),
+                'baggage_price': baggage_price * (2 + (0 if pd.isna(inbound['stops']) else 1) + (0 if pd.isna(outbound['stops']) else 1)),
                 'live_price': night_price * nights + eat_price * (nights + 1),
                 'total_price': outbound['price'] + inbound['price'] + 
                                night_price * nights + 
                                eat_price * (nights + 1) + 
-                               baggage_price * (2 + (1 if inbound['stops'] else 0) + (1 if outbound['stops'] else 0)),
+                               baggage_price * (2 + (0 if pd.isna(inbound['stops']) else 1) + (0 if pd.isna(outbound['stops']) else 1)),
                 'out_link': outbound['link'],
                 'in_link': inbound['link'],
             })
@@ -151,9 +150,9 @@ def main_start_end_selection():
             options=days,
             default=[d for d in days if d.weekday() in (5, 6)],
             format_func=lambda d: f"{d} ({calendar.day_abbr[d.weekday()]})")
-        workday_hours = st.slider('Workday hours', min_value=0, max_value=24, value=(14, 24))
+        workday_hours = st.slider('Workday hours', min_value=0, max_value=24, value=(0, 24))
         max_days = (flights_df['arrival'].max().date() - flights_df['departure'].min().date()).days
-        max_nights = st.slider('Max nights', min_value=0, max_value=max_days, value=max_days)
+        max_nights = st.slider('Max nights', min_value=0, max_value=max_days, value=min(max_days, 10))
     # run
     show_btn = len(start_selection) > 0 and len(end_selection) > 0
     if st.button('Generate round trips', disabled=not show_btn, width='stretch'):
@@ -212,7 +211,8 @@ def main_results():
                 key="editor", disabled=[c for c in show.columns if c != "favourite"])
             # handle favourites change
             favourite = edited[edited["favourite"]]
-            favourite.to_csv(st.session_state['filename'] + '_fav.csv', index=False)
+            if len(favourite) > 0 or os.path.exists(st.session_state['filename'] + '_fav.csv'):
+                favourite.to_csv(st.session_state['filename'] + '_fav.csv', index=False)
 
 
 def main():
