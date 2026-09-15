@@ -29,6 +29,8 @@ AIRPORT = {
     "Ibiza": "ibiz",
     "Mallorca": "palm",
     "Menorca": "meno",
+    # thailand
+    "Bangkok": "bkk",
 }
 
 PL_MONTHS = {
