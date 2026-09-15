@@ -66,7 +66,7 @@ def get_cases(args: argparse.Namespace) -> list[tuple[str, str, datetime.date, s
     for start, end, (date, is_return) in itertools.product(args.start, args.end, dates):
         if start == end: continue
         if is_return: start, end = end, start
-        link = build_url(start=start, end=end, departure_date=date, max_duration=args.max_duration, stop=args.stop)
+        link = build_url(start=start, end=end, departure_date=date, max_duration=args.max_duration, stops=args.stops)
         cases.append((start, end, date, link))
     return cases
 
@@ -145,7 +145,7 @@ if __name__ == "__main__":
     parser.add_argument("-rd", "--range-dates", help="The range of days of stay in N-N format")
     # filters
     parser.add_argument("--max_duration", type=int, default=600, help="Maximum flight duration in minutes")
-    parser.add_argument("--stop", action="store_true", help="Allow stops in the flight")
+    parser.add_argument("--stops", type=int, help="Max allowed stops in the flight")
     # download
     parser.add_argument("-f", "--folder", default=f"{os.environ['HOME']}/Downloads", help="Folder containing HTML files")
     parser.add_argument("-o", "--output", default="flights_parsed.csv", help="Output CSV file name")

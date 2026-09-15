@@ -73,21 +73,29 @@ def generate_pairs(flights_df: pd.DataFrame,
                 'in_date': format_date(inbound),
                 'in_time': format_time(inbound),
                 'flight_price': outbound['price'] + inbound['price'],
-                'baggage_price': baggage_price * (2 + (0 if pd.isna(inbound['stops']) else 1) + (0 if pd.isna(outbound['stops']) else 1)),
+                'baggage_price': baggage_price * (
+                    2 + 
+                    (0 if pd.isna(inbound['stops']) else inbound['stops'].count(',')) + 
+                    (0 if pd.isna(outbound['stops']) else outbound['stops'].count(','))),
                 'live_price': night_price * nights + eat_price * (nights + 1),
                 'total_price': outbound['price'] + inbound['price'] + 
                                night_price * nights + 
                                eat_price * (nights + 1) + 
-                               baggage_price * (2 + (0 if pd.isna(inbound['stops']) else 1) + (0 if pd.isna(outbound['stops']) else 1)),
+                               baggage_price * (
+                                   2 +
+                                   (0 if pd.isna(inbound['stops']) else inbound['stops'].count(',')) +
+                                   (0 if pd.isna(outbound['stops']) else outbound['stops'].count(','))),
                 'out_link': outbound['link'],
                 'in_link': inbound['link'],
             })
     return pd.DataFrame(pairs)
 
 def format_airport(data: pd.Series) -> str:
-    if pd.isna(data['stops']):
-        return f"{data['start']} -> {data['end']}"
-    return f"{data['start']} -> {data['stops']} -> {data['end']}"
+    stops = [data['start']]
+    if not pd.isna(data['stops']):
+        stops.extend(data['stops'].split(','))
+    stops.append(data['end'])
+    return " -> ".join(stops)
 
 def format_date(data: pd.Series) -> str:
     return data['departure'].strftime('%a %d.%m.%Y')

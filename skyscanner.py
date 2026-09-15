@@ -49,7 +49,7 @@ PL_MONTHS = {
 }
 
 
-def build_url(start: str, end: str, departure_date: datetime.date, max_duration: int, stop: bool) -> str:
+def build_url(start: str, end: str, departure_date: datetime.date, max_duration: int, stops: int) -> str:
     date_slug = departure_date.strftime("%y%m%d")
     base = "https://www.skyscanner.pl/transport/loty"
     query = "&".join((
@@ -61,7 +61,7 @@ def build_url(start: str, end: str, departure_date: datetime.date, max_duration:
         "outboundaltsenabled=false",
         "inboundaltsenabled=false",
         f"duration={max_duration}", # in minutes
-        f"stops={'!twoPlusStops' if stop else '!oneStop,!twoPlusStops'}"
+        f"stops={'' if stops >= 2 else '!twoPlusStops' if stops == 1 else '!oneStop,!twoPlusStops'}"
     ))
     return f"{base}/{AIRPORT[start]}/{AIRPORT[end]}/{date_slug}?{query}"
 
@@ -85,7 +85,7 @@ def parse_page(html: str, start: str, end: str, date: datetime.date) -> pd.DataF
         else: arrival = datetime.datetime.combine(date, datetime.datetime.strptime(arrival_time, "%H:%M").time())
         stops = ticket_container.select_one('[class*="Stops_stopsLabelContainer__"]').text.strip()
         if "Bezpośredni" in stops: stops = None
-        else: stops = get_airport_city(stops.replace(u'\xa0', u' ').split(" ")[-1].strip())
+        else: stops = ",".join(get_airport_city(s.strip()) for s in stops.replace(u'\xa0', u' ').split(" "))
         price = ticket_container.select_one('[class*="Price_mainPriceContainer__"]').text.strip()
         price = float("".join(price.replace(u'\xa0', u' ').split(" ")[:-1]))
         results.append({
