@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import shutil
 import argparse
@@ -17,28 +18,45 @@ from logger import get_logger
 logger = get_logger(__name__)
 
 
+
+def _parse_single_date(date: str) -> datetime.date:
+    if re.match(r"[0-9]{2}\.[0-9]{2}\.[0-9]{4}", date):
+        return datetime.datetime.strptime(date, "%d.%m.%Y").date()
+    raise ValueError(f"{date} is not date DD.MM.YYYY")
+
+def _parse_double_date(date: str) -> list[datetime.date]:
+    if m := re.match(r"([0-9]{2}\.[0-9]{2}\.[0-9]{4})-([0-9]{2}\.[0-9]{2}\.[0-9]{4})", date):
+        start = datetime.datetime.strptime(m.group(1), "%d.%m.%Y").date()
+        end = datetime.datetime.strptime(m.group(2), "%d.%m.%Y").date()
+        return [start + datetime.timedelta(days=i) for i in range((end - start).days + 1)]
+    raise ValueError(f"{date} is not range of dates DD.MM.YYYY-DD.MM.YYYY")
+
+
 def parse_dates(dates: list[str], must_have_dates: str, range_dates: str) -> list[tuple[datetime.date, bool]]:
-    dates = [(d, False) for d in dates]
+    # parse dates and ranges
+    parsed_dates = []
+    for date in dates:
+        try: parsed_dates.append(_parse_single_date(date)); continue
+        except ValueError: pass
+        try: parsed_dates.extend(_parse_double_date(date)); continue
+        except ValueError: pass
+        raise ValueError(f"{date} is neither date DD.MM.YYYY nor range of dates DD.MM.YYYY-DD.MM.YYYY")
+    dates = [(d, False) for d in parsed_dates]
+    # validate auto expansion
     if not must_have_dates and not range_dates:
         return dates
     if not must_have_dates or not range_dates:
         raise ValueError("Both must-have-dates or range-dates must be provided.")
-    start_str, end_str = must_have_dates.split("-")
-    start_date = datetime.datetime.strptime(start_str, "%d.%m.%Y").date()
-    end_date = datetime.datetime.strptime(end_str, "%d.%m.%Y").date()
-    min_days, max_days = map(int, range_dates.split("-"))
+    mhd_start, *_, mhd_end = _parse_double_date(must_have_dates)
+    _, max_days = map(int, range_dates.split("-"))
     # outbound
-    current_date = start_date - datetime.timedelta(days=max_days - 2)
-    while current_date < end_date:
-        logger.debug(f"Generated outbound date: {current_date}")
-        dates.append((current_date, False))
-        current_date += datetime.timedelta(days=1)
+    out_start = mhd_start - datetime.timedelta(days=max_days - 2)
+    out_end = mhd_end
+    dates.extend([(out_start + datetime.timedelta(days=i), False) for i in range((out_end - out_start).days + 1)])
     # inbound
-    current_date = start_date + datetime.timedelta(days=1)
-    while current_date < end_date + datetime.timedelta(days=max_days - 1):
-        logger.debug(f"Generated inbound date: {current_date}")
-        dates.append((current_date, True))
-        current_date += datetime.timedelta(days=1)
+    in_start = mhd_start + datetime.timedelta(days=1)
+    in_end = mhd_end + datetime.timedelta(days=max_days - 1)
+    dates.extend([(in_start + datetime.timedelta(days=i), True) for i in range((in_end - in_start).days + 1)])
     return dates
 
 
@@ -122,8 +140,8 @@ if __name__ == "__main__":
     # params
     parser.add_argument("-s", "--start", action="append", nargs="+", required=True, help="Start city names")
     parser.add_argument("-e", "--end", action="append", nargs="+", required=True, help="End city names")
-    parser.add_argument("-d", "--date", action="append", help="Departure dates in DD.MM.YYYY format")
-    parser.add_argument("-md", "--must-have-dates", help="The must-have dates to be inclded in DD.MM.YYYY-DD.MM.YYYY format")
+    parser.add_argument("-d", "--date", action="append", help="Departure date in DD.MM.YYYY or range DD.MM.YYYY-DD.MM.YYYY format")
+    parser.add_argument("-md", "--must-have-dates", help="The must-have dates to be inclded in range DD.MM.YYYY-DD.MM.YYYY format")
     parser.add_argument("-rd", "--range-dates", help="The range of days of stay in N-N format")
     # filters
     parser.add_argument("--max_duration", type=int, default=600, help="Maximum flight duration in minutes")
