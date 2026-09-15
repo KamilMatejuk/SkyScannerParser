@@ -68,14 +68,14 @@ def build_url(start: str, end: str, departure_date: datetime.date, max_duration:
 
 def parse_page(html: str, start: str, end: str, date: datetime.date) -> pd.DataFrame:
     soup = BeautifulSoup(html, "html.parser")
-    results = soup.select_one('[class*="FlightsResults_dayViewItems__"]')
-    if results is None: # no results with those filters
-        return pd.DataFrame()
-    ticket_containers = results.select('[class*="FlightsTicket_container__"]')
+    # results = soup.select_one('[class*="FlightsResults_dayViewItems__"]')
+    # if results is None: # no results with those filters
+    #     return pd.DataFrame()
+    ticket_containers = soup.select('[class*="FlightsTicket_container__"]')
     results = []
     for ticket_container in ticket_containers:
         link = ticket_container.select_one('a')['href']
-        airline = ticket_container.select_one('[class*="LogoImage_label__"]').text.strip()
+        airline = ticket_container.select_one('[class*="LogoImage_container__"]').text.strip()
         departure_time = ticket_container.select_one('[class*="RoutePartial_routePartialDepart__"] > span').text.strip()
         departure = datetime.datetime.combine(date, datetime.datetime.strptime(departure_time, "%H:%M").time())
         arrival_time = ticket_container.select_one('[class*="RoutePartial_routePartialArrive__"] > span').text.strip()
@@ -83,9 +83,9 @@ def parse_page(html: str, start: str, end: str, date: datetime.date) -> pd.DataF
             arrival_time = arrival_time.replace("+1", "").strip()
             arrival = datetime.datetime.combine(date + datetime.timedelta(days=1), datetime.datetime.strptime(arrival_time, "%H:%M").time())
         else: arrival = datetime.datetime.combine(date, datetime.datetime.strptime(arrival_time, "%H:%M").time())
-        stops = ticket_container.select_one('[class*="Stops_stopsLabelContainer__"]').text.strip()
+        stops = ticket_container.select_one('[class*="Stops_stopsRow__"]').text.strip()
         if "Bezpośredni" in stops: stops = None
-        else: stops = ",".join(get_airport_city(s.strip()) for s in stops.replace(u'\xa0', u' ').split(" "))
+        else: stops = " & ".join(get_airport_city(s) for s in stops.replace(u'\xa0', u' ').split(" "))
         price = ticket_container.select_one('[class*="Price_mainPriceContainer__"]').text.strip()
         price = float("".join(price.replace(u'\xa0', u' ').split(" ")[:-1]))
         results.append({

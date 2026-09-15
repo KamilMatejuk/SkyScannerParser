@@ -1,3 +1,4 @@
+import re
 import pandas as pd
 
 # MOUSE_POSITION = (1448, 387) # TV
@@ -6,9 +7,12 @@ MOUSE_POSITION = (1376, 395) # Laptop
 
 def get_airport_city(code: str) -> str:
     df = pd.read_csv("airport-codes.csv")
+    code = re.sub(r'[^a-zA-Z0-9]', '', code)
     try:
         city = df.loc[df['iata_code'] == code.upper(), 'municipality'].iloc[0]
         country = df.loc[df['iata_code'] == code.upper(), 'iso_country'].iloc[0]
-        return f"{city}, {country}"
+        city = re.sub(r'[^a-zA-Z ]', '', city)
+        country = re.sub(r'[^a-zA-Z ]', '', country)
+        return f"{city} ({country})"
     except IndexError:
-        return f"Unknown {code.upper()}"
+        return code.upper()

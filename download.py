@@ -124,8 +124,9 @@ def main(args):
             data = pd.concat([data, df], ignore_index=True) if not data.empty else df
             data.to_csv(args.output, index=False)
             logger.debug(f"Saved to {args.output}")
-            os.remove(os.path.join(args.folder, filename))
-            shutil.rmtree(os.path.join(args.folder, filename.replace(".html", "_files")))
+            for file in os.scandir(args.folder):
+                try: os.remove(os.path.join(args.folder, file.name))
+                except IsADirectoryError: shutil.rmtree(os.path.join(args.folder, file.name))
             logger.debug(f"Removed downloaded files.")
         except Exception as e:
             logger.error(f"Error processing {start} -> {end} on {date}")
