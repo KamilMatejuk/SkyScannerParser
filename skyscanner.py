@@ -1,3 +1,4 @@
+import re
 import datetime
 import pandas as pd
 from bs4 import BeautifulSoup
@@ -79,9 +80,10 @@ def parse_page(html: str, start: str, end: str, date: datetime.date) -> pd.DataF
         departure_time = ticket_container.select_one('[class*="RoutePartial_routePartialDepart__"] > span').text.strip()
         departure = datetime.datetime.combine(date, datetime.datetime.strptime(departure_time, "%H:%M").time())
         arrival_time = ticket_container.select_one('[class*="RoutePartial_routePartialArrive__"] > span').text.strip()
-        if "+1" in arrival_time:
-            arrival_time = arrival_time.replace("+1", "").strip()
-            arrival = datetime.datetime.combine(date + datetime.timedelta(days=1), datetime.datetime.strptime(arrival_time, "%H:%M").time())
+        if m := re.search(r"\+([0-9])", arrival_time):
+            days = int(m.group(1))
+            arrival_time = re.sub(r"\+[0-9]", "", arrival_time).strip()
+            arrival = datetime.datetime.combine(date + datetime.timedelta(days=days), datetime.datetime.strptime(arrival_time, "%H:%M").time())
         else: arrival = datetime.datetime.combine(date, datetime.datetime.strptime(arrival_time, "%H:%M").time())
         stops = ticket_container.select_one('[class*="Stops_stopsRow__"]').text.strip()
         if "Bezpośredni" in stops: stops = None
